@@ -7,7 +7,7 @@ The script will check if the YouTube channel an ad has aired on is from of a lis
 
 YouTube channels you have explicitly selected in the Google Ads interface for a campaign to be aired will not be blacklisted.
 
-This script is an improvemend of:
+This script is an improvement of:
 https://github.com/RicSti/google-ads-script-youtube-channel-excluder
 
 The number of YouTube API calls have been reduced by improving the Google Ads query returing placements to be checked.
