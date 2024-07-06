@@ -1,8 +1,8 @@
 var SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/xxxx";
 var SHEET_NAME = "Placements";
 var EMAIL_ADRESSES = "yourmail@domain.com"; // comma separated
-var allowedCountries = /^DE|AT|US|GB|CH$/; // Provide RegEx, e.g. /^DE$/ or /^DE|AT|CH$/
-var impressionsTimeRange = "LAST_7_DAYS";
+var allowedCountries = /^DE|AT|US|GB|CH$/; // Provide RegEx, e.g. /^DE$/ or /^DE|AT|CH$/ // ISO 3166-1 alpha-2  https://www.iso.org/obp/ui/#search
+var impressionsTimeRange = "LAST_7_DAYS"; // valid ranges, see: https://developers.google.com/google-ads/api/docs/query/date-ranges
 var impressionsThreshold = 1;
 var MUSIC_TOPIC_CATEGORIES = [
 "/m/04rlf", "/m/05fw6t", "/m/02mscn", "/m/0ggq0m", "/m/01lyv", "/m/02lkt", "/m/0glt670", "/m/05rwpb", "/m/03_d0", "/m/028sqc", "/m/0g293", "/m/064t9",
