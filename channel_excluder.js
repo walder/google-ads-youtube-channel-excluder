@@ -7,7 +7,7 @@ var impressionsThreshold = 1;
 var MUSIC_TOPIC_CATEGORIES = [
 "/m/04rlf", "/m/05fw6t", "/m/02mscn", "/m/0ggq0m", "/m/01lyv", "/m/02lkt", "/m/0glt670", "/m/05rwpb", "/m/03_d0", "/m/028sqc", "/m/0g293", "/m/064t9",
   "/m/06cqb", "/m/06j6l", "/m/06by7", "/m/0gywn"
-]
+];
 
 function main() {
   // Prepare an array for logging purposes
@@ -23,7 +23,12 @@ function main() {
     var exludedYoutubeChannelIterator = videoCampaign.videoTargeting().excludedYouTubeChannels().get();
     while (exludedYoutubeChannelIterator.hasNext()) {
       var excludedYouTubeChannel = exludedYoutubeChannelIterator.next();
-      alreadyExcludedYouTubeChannels.push(excludedYouTubeChannel.getChannelId());
+      try{
+         alreadyExcludedYouTubeChannels.push(excludedYouTubeChannel.getChannelId());
+      }
+      catch(err){
+        console.log("fetching next exclude channel failed "+err.message);      
+      }
     }
     
     //Fetch YouTube Channels that have been included to the campaign, these channels will not be blacklisted even if they do not meet inclusion critera (Musc Channel, Country)
@@ -41,7 +46,7 @@ function main() {
       videoCampaign.videoTargeting().newYouTubeChannelBuilder().withChannelId(toBeExcludedYouTubeChannels[i].id).exclude();
     }
     // Add logging information to log array
-    allExclusions.push({ campaign: videoCampaign.getName(), excludedYouTubeChannels: toBeExcludedYouTubeChannels })
+    allExclusions.push({ campaign: videoCampaign.getName(), excludedYouTubeChannels: toBeExcludedYouTubeChannels });
   }
   // Prepare and send a notification email with logging information
   sendConfirmationEmail(allExclusions);
@@ -54,7 +59,7 @@ function buildLikeQueryExtension(channelIDs){
       channels += " AND detail_placement_view.group_placement_target_url NOT LIKE '%"+channelIDs[i]+"%' ";
     }
   }
-  return channels
+  return channels;
 }
 
 function checkYouTubeChannels(campaignId, alreadyExcludedYouTubeChannels, includedYouTubeChannelsFromGoogleAdsInterface){
@@ -75,48 +80,66 @@ function checkYouTubeChannels(campaignId, alreadyExcludedYouTubeChannels, includ
     "  AND detail_placement_view.placement_type IN ('YOUTUBE_VIDEO','YOUTUBE_CHANNEL') " +
     "  AND detail_placement_view.group_placement_target_url IS NOT NULL " +
     buildLikeQueryExtension(alreadyExcludedYouTubeChannels) + buildLikeQueryExtension(includedYouTubeChannelsFromGoogleAdsInterface) + buildLikeQueryExtension(knownAllowedYouTubeChannels)
-    ""
-    ;
+    "";
   var result = AdsApp.search(query);
+  //console.log(query);
   
-  var channels = new Set()
+  var channels = new Set();
   
   while (result.hasNext()) {
     var row = result.next();
+   // console.log(row['detailPlacementView']['groupPlacementTargetUrl']);
     var channelID = row['detailPlacementView']['groupPlacementTargetUrl'].match(/^.*\/([^\/]*)$/)[1];
-    channels.add(channelID)
+   // console.log(channelID);
+    channels.add(channelID);
   }
   console.log(channels.size+ " unique YouTube placements found");
+   
+  //test data 1 entry invalid channel that has been included in google Ads Interface:
+  //channels = new Set(['UC3XTzVzaHQEd30rQbuvCtTQ'])
+
+  
+   //should fail but does not (lands on include list, but channel is excluded
+  //channels = new Set(['UC6yedsm3A27kECzyNQiyvDA'])
+ 
+  
+  //channel with empty topic Ids
+  //channels = new Set(['UCS3EcW5FS_p0MzapOPcNooA'])
   
    //unique ids of channels are iterated here
    for (const channelID of channels) {
-      const channelInfo = getChannelInfo(channelID);
-      var title = channelInfo.title
-      var topicIDs = channelInfo.topicIDs
-      var country = channelInfo.country
-      var language = channelInfo.language
-      var isMusicChannel = arrayContainsElementOf(MUSIC_TOPIC_CATEGORIES, topicIDs)
-
-      if (!isMusicChannel && country.match(allowedCountries)){
-        // Store channel id of newly identified YouTube Channel in array to be added to Google Sheet
-        newAllowedYouTubeChannels.push(channelID);
+     const channelInfo = getChannelInfo(channelID);
+     var title = channelInfo.title;
+     var topicIDs = channelInfo.topicIDs;
+     var country = channelInfo.country;
+     var language = channelInfo.language;
+     var isMusicChannel = arrayContainsElementOf(MUSIC_TOPIC_CATEGORIES, topicIDs);
+     /*
+        console.log("channel is Music: "+arrayContainsElementOf(MUSIC_TOPIC_CATEGORIES, topicIDs))
+        console.log("channel is in valid country: "+country.match(allowedCountries))
+        console.log("channel is in known allowed Channels: "+(knownAllowedYouTubeChannels.indexOf(channelID) == -1))
+        console.log("channel is included in google Ads: "+(includedYouTubeChannelsFromGoogleAdsInterface.indexOf(channelID) != -1))
+    */  
+     if (!isMusicChannel && country.match(allowedCountries)){
+       // Store channel id of newly identified YouTube Channel in array to be added to Google Sheet
+       newAllowedYouTubeChannels.push(channelID);
+     }
+     else {
+       toBeExcludedYouTubeChannels.push(
+         {
+           id: channelID,
+           name: title,
+           country: country,
+           language: language,
+           isMusicChannel: isMusicChannel 
+         }
+       );
+     }
       }
-      else {
-          toBeExcludedYouTubeChannels.push(
-            {
-              id: channelID,
-              name: title,
-              country: country,
-              language: language,
-              isMusicChannel: isMusicChannel 
-            }
-          );
-      }
+    if (newAllowedYouTubeChannels.length > 0){
+      console.log(newAllowedYouTubeChannels.length + " new allowed Channel(s) found." + "\n\n");
+      saveAllowedYouTubeChannels(newAllowedYouTubeChannels);
     }
-  if (newAllowedYouTubeChannels.length > 0){
-    console.log(newAllowedYouTubeChannels.length + " new allowed Channel(s) found." + "\n\n");
-    saveAllowedYouTubeChannels(newAllowedYouTubeChannels);
-  }
   return toBeExcludedYouTubeChannels.sort();
 }
 
@@ -134,6 +157,11 @@ function arrayContainsElementOf(masterArray, searchArray){
 }
 
 function getChannelInfo(channelId){
+  var channelInformation = {};
+  channelInformation.country = "";
+  channelInformation.defaultLanguage = "";
+  channelInformation.topicIDs = "";
+  channelInformation.title = "";
   try {
     const results = YouTube.Channels.list('snippet,localizations, topicDetails', {
       id: channelId,
@@ -143,48 +171,47 @@ function getChannelInfo(channelId){
       console.log(`ID ${channelId}: Unable to search videos`);
       return;
     }
-    var topicIDs = []
-    var title = ""
-    var country = ""
-    var defaultLanguage = ""
+    var topicIDs = [];
+    var title = "";
+    var country = "";
+    var defaultLanguage = "";
     
     if(results.items[0].hasOwnProperty('topicDetails')) {
       if(results.items[0].topicDetails.hasOwnProperty('topicIds')) {
           var topicDetails = results.items[0].topicDetails.topicIds;
           for (var i = 0; i < topicDetails.length; i++){
-            topicIDs.push(topicDetails[i])
+            topicIDs.push(topicDetails[i]);
           }
       }
     }
     
     if(results.items[0].snippet.hasOwnProperty('title')){
-      title = results.items[0].snippet.title
+      title = results.items[0].snippet.title;
     }
     
     if(results.items[0].snippet.hasOwnProperty('country')){
-      country = results.items[0].snippet.country
+      country = results.items[0].snippet.country;
     }
     
     if(results.items[0].snippet.hasOwnProperty('defaultLanguage')){
-      defaultLanguage = results.items[0].snippet.defaultLanguage
+      defaultLanguage = results.items[0].snippet.defaultLanguage;
     }
-    var channelInformation = {}
-    channelInformation.country = country
-    channelInformation.defaultLanguage = defaultLanguage
-    channelInformation.topicIDs = topicIDs
-    channelInformation.title = title
-    return channelInformation
+    channelInformation.country = country;
+    channelInformation.defaultLanguage = defaultLanguage;
+    channelInformation.topicIDs = topicIDs;
+    channelInformation.title = title;
   } catch (err) {
     // TODO (developer) - Handle exceptions from Youtube API
     console.log(`ID ${channelId}: Failed with an error: %s`, err.message);
-  }  
+  } 
+  return channelInformation;
 }
 
 function getAllowedYouTubeChannels(){
   var sheet = SpreadsheetApp.openByUrl(SPREADSHEET_URL).getSheetByName(SHEET_NAME);
   var lastRow = sheet.getLastRow();
   if(lastRow < 1) {
-    lastRow = 1
+    lastRow = 1;
   }
   var range = sheet.getRange(1, 1, lastRow);
   var returnValues = [];
@@ -213,7 +240,7 @@ function sendConfirmationEmail(allExclusions){
     output += allExclusions[i].excludedYouTubeChannels.length.toLocaleString("de") + " Channel(s) excluded from Campaign " + allExclusions[i].campaign + "\n\n";
     var outputChannels = "";
     for (j=0;j<allExclusions[i].excludedYouTubeChannels.length;j++){
-        outputChannels += allExclusions[i].excludedYouTubeChannels[j].name + " (Country: " + allExclusions[i].excludedYouTubeChannels[j].country + "| Language: " + allExclusions[i].excludedYouTubeChannels[j].language + " | Is Music Channel: " + allExclusions[i].excludedYouTubeChannels[j].isMusicChannel + ")\n";
+        outputChannels += allExclusions[i].excludedYouTubeChannels[j].name + " (Country: " + allExclusions[i].excludedYouTubeChannels[j].country + " | Language: " + allExclusions[i].excludedYouTubeChannels[j].language + " | Is Music Channel: " + allExclusions[i].excludedYouTubeChannels[j].isMusicChannel + ")\n";
         outputChannels += "https://youtube.com/channel/" + allExclusions[i].excludedYouTubeChannels[j].id + "\n\n";
     }
     output += outputChannels;
@@ -222,7 +249,7 @@ function sendConfirmationEmail(allExclusions){
   var eMailSubject = "YouTube Channel Excluder";
   var eMailContent = output;
   console.log(output);
-  sendSimpleTextEmail(eMailAddress,eMailSubject,eMailContent)
+  sendSimpleTextEmail(eMailAddress,eMailSubject,eMailContent);
 }
 
 // HELPERS
