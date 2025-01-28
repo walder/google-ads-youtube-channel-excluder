@@ -3,7 +3,7 @@ Google Ads script that scans YouTube channels and excludes them based on country
 
 Have you ever set up a YouTube campaign only to see that it is aired on all kinds of rubish YouTube channels? This script can help you by exluding unwanted channels.
 
-The script will check if the YouTube channel an ad has aired on is from of a list of defined countries. Further it will check if the channel is a music channel and even if that channel is form an alowed country it will be blacklisted. The reason for this beeing that music video clips are oftentimes not the best videos to place ads, since people consume them without actively watching YouTube.
+The script will check if the YouTube channel an ad has aired on is from of a list of defined countries. Further it will check if the channel is a music channel and even if that channel is from an allowed country it will be blacklisted. The reason for this beeing that music video clips are oftentimes not the best videos to place ads, since people consume them without actively watching YouTube.
 
 YouTube channels you have explicitly selected in the Google Ads interface for a campaign to be aired will not be blacklisted.
 
@@ -13,7 +13,7 @@ https://github.com/RicSti/google-ads-script-youtube-channel-excluder
 The number of YouTube API calls have been reduced by improving the Google Ads query returing placements to be checked.
 Additionally it checks for the topic type of a channel and excludes the channel if the topic is in one of the music categories.
 
-Please take in to account that this script will also exclude channels that do not have a country of origin set. Oftentimes channels that do not have that information set are of low quality. Check the exlcusion list after the first run to make sure you are not exlucding unwanted channels.
+Please take in to account that this script will also exclude channels that do not have a country of origin set. Oftentimes channels that do not have that information set are of low quality. Check the exlcusion list after the first run to make sure you are not excluding unwanted channels.
 
 # how to use
 Load the script in to the script section of Google Ads. Make sure you enable the YouTube API for the Google Ads script (top right extended APIs).
